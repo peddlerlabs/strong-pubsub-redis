@@ -31,16 +31,23 @@ Adapter.prototype.connect = function(cb) {
   var adapter = this;
   var client = this.client;
   var options = this.options;
-  var pubClient = this.redisPubClient = redis.createClient(
-    this.options.port,
-    this.options.host,
-    this.options.redis
-  );
-  var subClient = this.redisSubClient = redis.createClient(
-    this.options.port,
-    this.options.host,
-    this.options.redis
-  );
+  var pubClient;
+  var subClient;
+  if(typeof this.options.createClient === 'function'){
+      pubClient = this.redisPubClient = this.options.createClient();
+      subClient = this.redisSubClient = this.options.createClient();
+  } else {
+      pubClient = this.redisPubClient = redis.createClient(
+        this.options.port,
+        this.options.host,
+        this.options.redis
+      );
+      subClient = this.redisSubClient = redis.createClient(
+        this.options.port,
+        this.options.host,
+        this.options.redis
+      );
+  }
 
   var connacks = 0;
   var clients = this.clients = new EventEmitter();
@@ -52,7 +59,9 @@ Adapter.prototype.connect = function(cb) {
 
   function onConnect() {
     connacks++;
+    console.log('firstConnect');
     if(connacks === 2) {
+      console.log(pubClient.publish, subClient.end, subClient.subscribe)
       clients.emit('connect');
     }
   }
@@ -106,9 +115,9 @@ Adapter.prototype.publish = function(topic, message, options, cb) {
  *
  * @callback {Function} callback Called once the adapter has finished subscribing.
  * @param {Error} err An error object is included if an error was supplied by the adapter.
- * @param {Object[]} granted An array of topics granted formatted as an object `{topic: 't', qos: n}`. 
- * @param {String} granted[n].topic The topic granted 
- * @param {String} granted[n].qos The qos for the topic 
+ * @param {Object[]} granted An array of topics granted formatted as an object `{topic: 't', qos: n}`.
+ * @param {String} granted[n].topic The topic granted
+ * @param {String} granted[n].qos The qos for the topic
  */
 
 Adapter.prototype.subscribe = function(topic, options, cb) {
